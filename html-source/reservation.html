@@ -218,7 +218,7 @@
 
     function Prompt() {
         let toast = function (c) {
-            const{
+            const {
                 msg = '',
                 icon = 'success',
                 position = 'top-end',
@@ -280,7 +280,7 @@
                 title = "",
             } = c;
 
-            const { value: formValues } = await Swal.fire({
+            const {value: formValues} = await Swal.fire({
                 title: title,
                 html: msg,
                 backdrop: false,
