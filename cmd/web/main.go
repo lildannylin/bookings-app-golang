@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/alexedwards/scs/v2"
 	"github.com/lildannylin/bookings-app-golang/internal/config"
+	"github.com/lildannylin/bookings-app-golang/internal/driver"
 	"github.com/lildannylin/bookings-app-golang/internal/handlers"
 	"github.com/lildannylin/bookings-app-golang/internal/helpers"
 	"github.com/lildannylin/bookings-app-golang/internal/models"
@@ -17,19 +18,26 @@ import (
 
 const portNumber = ":8080"
 
-var app config.AppConfig
-var session *scs.SessionManager
-var infoLog *log.Logger
-var errorLog *log.Logger
+var (
+	app        config.AppConfig
+	session    *scs.SessionManager
+	infoLog    *log.Logger
+	errorLog   *log.Logger
+	DBhost     string
+	DBport     string
+	DBuser     string
+	DBpassword string
+	DBname     string
+)
 
 // main is the main function
 func main() {
 
-	err := run()
+	db, err := run()
 	if err != nil {
 		log.Fatal(err)
 	}
-
+	defer db.SQL.Close()
 	fmt.Println(fmt.Sprintf("Staring application on port %s", portNumber))
 
 	srv := &http.Server{
@@ -43,7 +51,7 @@ func main() {
 	}
 }
 
-func run() error {
+func run() (*driver.DB, error) {
 	//Put in the session
 	gob.Register(models.Reservation{})
 
@@ -65,19 +73,34 @@ func run() error {
 
 	app.Session = session
 
+	// connect to database
+	DBhost = "localhost"
+	DBport = "5432"
+	DBuser = "danny"
+	DBpassword = "1201"
+	DBname = "bookings"
+
+	log.Println("Connecting to database...")
+	db, err := driver.ConnectSQL(fmt.Sprintf("host=%s port=%s dbname=%s user=%s password=%s",
+		DBhost, DBport, DBname, DBuser, DBpassword))
+	if err != nil {
+		log.Fatal("Cannot connect database")
+	}
+	log.Println("Connected to database!")
+
 	tc, err := render.CreateTemplateCache()
 	if err != nil {
 		log.Fatal("cannot create template cache")
-		return err
+		return nil, err
 	}
 
 	app.TemplateCache = tc
 	app.UseCache = false
 
-	repo := handlers.NewRepo(&app)
+	repo := handlers.NewRepo(&app, db)
 	handlers.NewHandlers(repo)
 	render.NewTemplates(&app)
 	helpers.NewHelper(&app)
 
-	return nil
+	return db, nil
 }
