@@ -3,8 +3,11 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/lildannylin/bookings-app-golang/internal/driver"
 	"github.com/lildannylin/bookings-app-golang/internal/forms"
 	"github.com/lildannylin/bookings-app-golang/internal/helpers"
+	"github.com/lildannylin/bookings-app-golang/internal/repository"
+	"github.com/lildannylin/bookings-app-golang/internal/repository/dbrepo"
 	"log"
 	"net/http"
 
@@ -19,12 +22,14 @@ var Repo *Repository
 // Repository is the repository type
 type Repository struct {
 	App *config.AppConfig
+	DB  repository.DatabaseRepo
 }
 
 // NewRepo creates a new repository
-func NewRepo(a *config.AppConfig) *Repository {
+func NewRepo(a *config.AppConfig, db *driver.DB) *Repository {
 	return &Repository{
 		App: a,
+		DB:  dbrepo.NewPostgresRepo(db.SQL, a),
 	}
 }
 
@@ -35,6 +40,7 @@ func NewHandlers(r *Repository) {
 
 // Home is the handler for the home page
 func (m *Repository) Home(w http.ResponseWriter, r *http.Request) {
+
 	render.RenderTemplate(w, r, "home.page.tmpl", &models.TemplateData{})
 }
 
