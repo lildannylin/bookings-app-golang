@@ -10,6 +10,7 @@ import (
 	"github.com/lildannylin/bookings-app-golang/internal/helpers"
 	"github.com/lildannylin/bookings-app-golang/internal/repository"
 	"github.com/lildannylin/bookings-app-golang/internal/repository/dbrepo"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -66,13 +67,15 @@ func (m *Repository) About(w http.ResponseWriter, r *http.Request) {
 func (m *Repository) Reservation(w http.ResponseWriter, r *http.Request) {
 	res, ok := m.App.Session.Get(r.Context(), "reservation").(models.Reservation)
 	if !ok {
-		helpers.ServerError(w, errors.New("Can't get reservation from session"))
+		m.App.Session.Put(r.Context(), "error", "can't get reservation from session")
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
 	room, err := m.DB.GetRoomByID(res.RoomID)
 	if err != nil {
-		helpers.ServerError(w, err)
+		m.App.Session.Put(r.Context(), "error", "can't find room!")
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
@@ -101,11 +104,16 @@ func (m *Repository) PostReservation(w http.ResponseWriter, r *http.Request) {
 	reservation, ok := m.App.Session.Get(r.Context(), "reservation").(models.Reservation)
 	if !ok {
 		helpers.ServerError(w, errors.New("cannot get from session"))
+		m.App.Session.Put(r.Context(), "error", "can't parse form!")
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
 	}
 	err := r.ParseForm()
 	//err = errors.New("This is an error message")
 	if err != nil {
 		helpers.ServerError(w, err)
+		m.App.Session.Put(r.Context(), "error", "can't parse form!")
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
@@ -158,7 +166,9 @@ func (m *Repository) PostReservation(w http.ResponseWriter, r *http.Request) {
 
 	newReservationID, err := m.DB.InertReservation(reservation)
 	if err != nil {
-		helpers.ServerError(w, err)
+		m.App.Session.Put(r.Context(), "error", "can't insert reservation into database!")
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
 	}
 
 	restriction := models.RoomRestriction{
@@ -171,7 +181,8 @@ func (m *Repository) PostReservation(w http.ResponseWriter, r *http.Request) {
 
 	err = m.DB.InsertRoomRestriction(restriction)
 	if err != nil {
-		helpers.ServerError(w, err)
+		m.App.Session.Put(r.Context(), "error", "can't insert room restriction!")
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
@@ -218,15 +229,20 @@ func (m *Repository) PostAvailability(w http.ResponseWriter, r *http.Request) {
 	layout := "2006-01-02"
 	startDate, err := time.Parse(layout, start)
 	if err != nil {
-		helpers.ServerError(w, err)
+		m.App.Session.Put(r.Context(), "error", "can't parse start date!")
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
 	}
 	endDate, err := time.Parse(layout, end)
 	if err != nil {
-		helpers.ServerError(w, err)
+		m.App.Session.Put(r.Context(), "error", "can't parse end date!")
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
 	}
 	rooms, err := m.DB.SearchAvailabilityForAllRooms(startDate, endDate)
 	if err != nil {
-		helpers.ServerError(w, err)
+		m.App.Session.Put(r.Context(), "error", "can't get availability for rooms")
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
@@ -235,6 +251,7 @@ func (m *Repository) PostAvailability(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(rooms) == 0 {
+		// no availability
 		m.App.Session.Put(r.Context(), "error", "No availability")
 		http.Redirect(w, r, "/search-availability", http.StatusSeeOther)
 		return
@@ -401,4 +418,42 @@ func (m *Repository) ShowLogin(w http.ResponseWriter, r *http.Request) {
 	render.Template(w, r, "login.page.tmpl", &models.TemplateData{
 		Form: forms.New(nil),
 	})
+}
+
+func (m *Repository) PostShowLogin(w http.ResponseWriter, r *http.Request) {
+	_ = m.App.Session.RenewToken(r.Context())
+
+	err := r.ParseForm()
+	if err != nil {
+		m.App.Session.Put(r.Context(), "error", "can't parse form!")
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	email := r.Form.Get("email")
+	password := r.Form.Get("password")
+
+	form := forms.New(r.PostForm)
+	form.Required("email", "password")
+	form.IsEmail("email")
+	if !form.Valid() {
+		render.Template(w, r, "login.page.tmpl", &models.TemplateData{
+			Form: form,
+		})
+		return
+	}
+
+	id, _, err := m.DB.Authenticate(email, password)
+
+	if err != nil {
+		log.Println(err)
+
+		m.App.Session.Put(r.Context(), "error", "Invalid login credentials")
+		http.Redirect(w, r, "/user/login", http.StatusSeeOther)
+		return
+	}
+
+	m.App.Session.Put(r.Context(), "user_id", id)
+	m.App.Session.Put(r.Context(), "flash", "Logged in successfully")
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
