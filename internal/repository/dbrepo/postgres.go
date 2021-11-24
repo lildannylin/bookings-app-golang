@@ -67,7 +67,15 @@ func (m *postgreDBRepo) SearchAvailabilityByDateByRoomID(start, end time.Time, r
 	defer cancel()
 
 	var numRows int
-	query := `select count(id) from room_restrictions where room_id =$1 and $2 < end_date and $3 > start_date;`
+
+	query := `
+		select
+			count(id)
+		from
+			room_restriction
+		where
+			room_id = $1
+			and $2 < end_date and $3 > start_date;`
 
 	row := m.DB.QueryRowContext(ctx, query, roomID, start, end)
 	err := row.Scan(&numRows)
@@ -76,10 +84,9 @@ func (m *postgreDBRepo) SearchAvailabilityByDateByRoomID(start, end time.Time, r
 	}
 
 	if numRows == 0 {
-		return false, nil
+		return true, nil
 	}
-
-	return true, nil
+	return false, nil
 }
 
 func (m *postgreDBRepo) SearchAvailabilityForAllRooms(start, end time.Time) ([]models.Room, error) {

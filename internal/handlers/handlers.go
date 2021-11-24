@@ -9,7 +9,6 @@ import (
 	"github.com/lildannylin/bookings-app-golang/internal/helpers"
 	"github.com/lildannylin/bookings-app-golang/internal/repository"
 	"github.com/lildannylin/bookings-app-golang/internal/repository/dbrepo"
-	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -238,22 +237,64 @@ func (m *Repository) Contact(w http.ResponseWriter, r *http.Request) {
 }
 
 type jsonResponse struct {
-	OK      bool   `json:"ok"`
-	Message string `json:"message"`
+	OK        bool   `json:"ok"`
+	Message   string `json:"message"`
+	RoomID    string `json:"room_id"`
+	StartDate string `json:"start_date"`
+	EndDate   string `json:"end_date"`
 }
 
 // AvailabilityJSON handles for availability and send JSON response
 func (m *Repository) AvailabilityJSON(w http.ResponseWriter, r *http.Request) {
-	resp := jsonResponse{
-		OK:      false,
-		Message: "Available",
+	// need to parse request body
+	err := r.ParseForm()
+	if err != nil {
+		// can't parse form, so return appropriate json
+		resp := jsonResponse{
+			OK:      false,
+			Message: "Internal server error",
+		}
+
+		out, _ := json.MarshalIndent(resp, "", "     ")
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(out)
+		return
 	}
 
-	out, err := json.MarshalIndent(resp, "", "    ")
+	sd := r.Form.Get("start")
+	ed := r.Form.Get("end")
+
+	layout := "2006-01-02"
+	startDate, _ := time.Parse(layout, sd)
+	endDate, _ := time.Parse(layout, ed)
+
+	roomID, _ := strconv.Atoi(r.Form.Get("room_id"))
+
+	available, err := m.DB.SearchAvailabilityByDateByRoomID(startDate, endDate, roomID)
 	if err != nil {
-		helpers.ServerError(w, err)
+		// got a database error, so return appropriate json
+		resp := jsonResponse{
+			OK:      false,
+			Message: "Error querying database",
+		}
+
+		out, _ := json.MarshalIndent(resp, "", "     ")
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(out)
+		return
 	}
-	log.Println(string(out))
+	resp := jsonResponse{
+		OK:        available,
+		Message:   "",
+		StartDate: sd,
+		EndDate:   ed,
+		RoomID:    strconv.Itoa(roomID),
+	}
+
+	// I removed the error check, since we handle all aspects of
+	// the json right here
+	out, _ := json.MarshalIndent(resp, "", "     ")
+
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(out)
 }
