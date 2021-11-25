@@ -475,7 +475,18 @@ func (m *Repository) AdminNewReservation(w http.ResponseWriter, r *http.Request)
 }
 
 func (m *Repository) AdminAllReservation(w http.ResponseWriter, r *http.Request) {
-	render.Template(w, r, "admin-all-reservation.page.tmpl", &models.TemplateData{})
+	reservations, err := m.DB.AllReservation()
+	if err != nil {
+		helpers.ServerError(w, err)
+		return
+	}
+
+	data := make(map[string]interface{})
+	data["reservations"] = reservations
+
+	render.Template(w, r, "admin-all-reservation.page.tmpl", &models.TemplateData{
+		Data: data,
+	})
 }
 
 func (m *Repository) AdminReservationCalendar(w http.ResponseWriter, r *http.Request) {

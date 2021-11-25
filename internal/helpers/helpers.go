@@ -9,7 +9,7 @@ import (
 
 var app *config.AppConfig
 
-// Newhelpers sets up app config for helpers
+// NewHelper sets up app config for helpers
 func NewHelper(a *config.AppConfig) {
 	app = a
 }
