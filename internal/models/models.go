@@ -44,12 +44,13 @@ type Reservation struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 	Room      Room
+	Processed int
 }
 
 type RoomRestriction struct {
 	ID            int
 	StartDate     time.Time
-	EndData       time.Time
+	EndDate       time.Time
 	RoomID        int
 	ReservationID int
 	RestrictionID int

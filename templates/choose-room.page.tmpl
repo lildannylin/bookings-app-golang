@@ -9,9 +9,9 @@
                 {{$rooms := index .Data "rooms"}}
 
                 <ul>
-                {{range $rooms}}
-                    <li><a href="/choose-room/{{.ID}}">{{.RoomName}}</a></li>
-                {{end}}
+                    {{range $rooms}}
+                        <li><a href="/choose-room/{{.ID}}">{{.RoomName}}</a></li>
+                    {{end}}
                 </ul>
             </div>
         </div>

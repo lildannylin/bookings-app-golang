@@ -13,6 +13,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/lildannylin/bookings-app-golang/internal/config"
@@ -173,7 +174,7 @@ func (m *Repository) PostReservation(w http.ResponseWriter, r *http.Request) {
 
 	restriction := models.RoomRestriction{
 		StartDate:     reservation.StartDate,
-		EndData:       reservation.EndDate,
+		EndDate:       reservation.EndDate,
 		RoomID:        reservation.RoomID,
 		ReservationID: newReservationID,
 		RestrictionID: 1,
@@ -223,6 +224,13 @@ func (m *Repository) Availability(w http.ResponseWriter, r *http.Request) {
 
 // PostAvailability renders the search availability page
 func (m *Repository) PostAvailability(w http.ResponseWriter, r *http.Request) {
+	err := r.ParseForm()
+	if err != nil {
+		m.App.Session.Put(r.Context(), "error", "can't parse form!")
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
 	start := r.Form.Get("start")
 	end := r.Form.Get("end")
 
@@ -239,15 +247,12 @@ func (m *Repository) PostAvailability(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
+
 	rooms, err := m.DB.SearchAvailabilityForAllRooms(startDate, endDate)
 	if err != nil {
 		m.App.Session.Put(r.Context(), "error", "can't get availability for rooms")
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
-	}
-
-	for _, i := range rooms {
-		m.App.InforLog.Println("ROOM:", i.ID, i.RoomName)
 	}
 
 	if len(rooms) == 0 {
@@ -471,7 +476,17 @@ func (m *Repository) AdminDashboard(w http.ResponseWriter, r *http.Request) {
 }
 
 func (m *Repository) AdminNewReservation(w http.ResponseWriter, r *http.Request) {
-	render.Template(w, r, "admin-new-reservation.page.tmpl", &models.TemplateData{})
+	reservations, err := m.DB.AllNewReservation()
+	if err != nil {
+		helpers.ServerError(w, err)
+		return
+	}
+
+	data := make(map[string]interface{})
+	data["reservations"] = reservations
+	render.Template(w, r, "admin-new-reservation.page.tmpl", &models.TemplateData{
+		Data: data,
+	})
 }
 
 func (m *Repository) AdminAllReservation(w http.ResponseWriter, r *http.Request) {
@@ -489,6 +504,75 @@ func (m *Repository) AdminAllReservation(w http.ResponseWriter, r *http.Request)
 	})
 }
 
+func (m *Repository) AdminShowReservation(w http.ResponseWriter, r *http.Request) {
+
+	exploded := strings.Split(r.RequestURI, "/")
+	//
+	id, err := strconv.Atoi(exploded[4])
+	if err != nil {
+		helpers.ServerError(w, err)
+		return
+	}
+
+	src := exploded[3]
+	stringMap := make(map[string]string)
+	stringMap["src"] = src
+
+	res, err := m.DB.GetReservationByID(id)
+	if err != nil {
+		helpers.ServerError(w, err)
+		return
+	}
+
+	data := make(map[string]interface{})
+	data["reservation"] = res
+
+	render.Template(w, r, "admin-reservation-show.page.tmpl", &models.TemplateData{
+		StringMap: stringMap,
+		Data:      data,
+		Form:      forms.New(nil),
+	})
+}
+
 func (m *Repository) AdminReservationCalendar(w http.ResponseWriter, r *http.Request) {
 	render.Template(w, r, "admin-reservation-calendar.page.tmpl", &models.TemplateData{})
+}
+
+func (m *Repository) AdminPostShowReservation(w http.ResponseWriter, r *http.Request) {
+	err := r.ParseForm()
+	if err != nil {
+		m.App.Session.Put(r.Context(), "error", "can't parse form!")
+		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+		return
+	}
+	exploded := strings.Split(r.RequestURI, "/")
+	//
+	id, err := strconv.Atoi(exploded[4])
+	if err != nil {
+		helpers.ServerError(w, err)
+		return
+	}
+
+	src := exploded[3]
+	stringMap := make(map[string]string)
+	stringMap["src"] = src
+
+	res, err := m.DB.GetReservationByID(id)
+	if err != nil {
+		helpers.ServerError(w, err)
+		return
+	}
+
+	res.FirstName = r.Form.Get("first_name")
+	res.LastName = r.Form.Get("last_name")
+	res.Email = r.Form.Get("email")
+	res.Phone = r.Form.Get("phone")
+
+	err = m.DB.UpdateReservation(res)
+	if err != nil {
+		helpers.ServerError(w, err)
+		return
+	}
+	m.App.Session.Put(r.Context(), "flash", "Changes Saved")
+	http.Redirect(w, r, fmt.Sprintf("/admin/reservation-%s", src), http.StatusSeeOther)
 }
