@@ -9,13 +9,13 @@ import (
 
 var app *config.AppConfig
 
-// NewHelper sets up app config for helpers
-func NewHelper(a *config.AppConfig) {
+// NewHelpers sets up app config for helpers
+func NewHelpers(a *config.AppConfig) {
 	app = a
 }
 
 func ClientError(w http.ResponseWriter, status int) {
-	app.InforLog.Println("Client error with status of", status)
+	app.InfoLog.Println("Client error with status of", status)
 	http.Error(w, http.StatusText(status), status)
 }
 

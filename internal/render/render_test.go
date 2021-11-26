@@ -1,19 +1,21 @@
 package render
 
 import (
-	"github.com/lildannylin/bookings-app-golang/internal/models"
+	"github.com/tsawler/bookings/internal/models"
 	"net/http"
 	"testing"
 )
 
 func TestAddDefaultData(t *testing.T) {
 	var td models.TemplateData
+
 	r, err := getSession()
 	if err != nil {
 		t.Error(err)
 	}
 
 	session.Put(r.Context(), "flash", "123")
+
 	result := AddDefaultData(&td, r)
 
 	if result.Flash != "123" {
@@ -40,12 +42,11 @@ func TestRenderTemplate(t *testing.T) {
 	err = Template(&ww, r, "home.page.tmpl", &models.TemplateData{})
 	if err != nil {
 		t.Error("error writing template to browser")
-
 	}
+
 	err = Template(&ww, r, "non-existent.page.tmpl", &models.TemplateData{})
 	if err == nil {
 		t.Error("rendered template that does not exist")
-
 	}
 }
 
@@ -62,7 +63,7 @@ func getSession() (*http.Request, error) {
 	return r, nil
 }
 
-func TestNewTemplate(t *testing.T) {
+func TestNewTemplates(t *testing.T) {
 	NewRenderer(app)
 }
 

@@ -8,6 +8,7 @@ import (
 	"github.com/lildannylin/bookings-app-golang/internal/config"
 	"github.com/lildannylin/bookings-app-golang/internal/models"
 	"html/template"
+	"log"
 	"net/http"
 	"path/filepath"
 	"time"
@@ -27,6 +28,7 @@ func Add(a, b int) int {
 	return a + b
 }
 
+// Iterate returns a slice of ints, starting at 1, going to count
 func Iterate(count int) []int {
 	var i int
 	var items []int
@@ -41,7 +43,7 @@ func NewRenderer(a *config.AppConfig) {
 	app = a
 }
 
-// HumanDate returun time to be readable
+// HumanDate returns time in YYYY-MM-DD format
 func HumanDate(t time.Time) string {
 	return t.Format("2006-01-02")
 }
@@ -50,20 +52,19 @@ func FormatDate(t time.Time, f string) string {
 	return t.Format(f)
 }
 
+// AddDefaultData adds data for all templates
 func AddDefaultData(td *models.TemplateData, r *http.Request) *models.TemplateData {
 	td.Flash = app.Session.PopString(r.Context(), "flash")
 	td.Error = app.Session.PopString(r.Context(), "error")
 	td.Warning = app.Session.PopString(r.Context(), "warning")
 	td.CSRFToken = nosurf.Token(r)
-
 	if app.Session.Exists(r.Context(), "user_id") {
 		td.IsAuthenticated = 1
 	}
-
 	return td
 }
 
-// Template renders a template
+// Template renders templates using html/template
 func Template(w http.ResponseWriter, r *http.Request, tmpl string, td *models.TemplateData) error {
 	var tc map[string]*template.Template
 
@@ -71,26 +72,30 @@ func Template(w http.ResponseWriter, r *http.Request, tmpl string, td *models.Te
 		// get the template cache from the app config
 		tc = app.TemplateCache
 	} else {
+		// this is just used for testing, so that we rebuild
+		// the cache on every request
 		tc, _ = CreateTemplateCache()
 	}
 
 	t, ok := tc[tmpl]
 	if !ok {
-		fmt.Println("Could not get template from template cache")
-		return errors.New("Could not get template from template cache")
+		return errors.New("can't get template from cache")
 	}
 
 	buf := new(bytes.Buffer)
 
 	td = AddDefaultData(td, r)
 
-	_ = t.Execute(buf, td)
-
-	_, err := buf.WriteTo(w)
+	err := t.Execute(buf, td)
 	if err != nil {
-		fmt.Println("error writing template to browser", err)
+		log.Fatal(err)
+	}
+	_, err = buf.WriteTo(w)
+	if err != nil {
+		fmt.Println("Error writing template to browser", err)
 		return err
 	}
+
 	return nil
 }
 

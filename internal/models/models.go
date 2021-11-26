@@ -4,8 +4,7 @@ import (
 	"time"
 )
 
-//Database Model
-
+// User is the user model
 type User struct {
 	ID          int
 	FirstName   string
@@ -17,6 +16,7 @@ type User struct {
 	UpdatedAt   time.Time
 }
 
+// Room is the room model
 type Room struct {
 	ID        int
 	RoomName  string
@@ -24,6 +24,7 @@ type Room struct {
 	UpdatedAt time.Time
 }
 
+// Restriction is the restriction model
 type Restriction struct {
 	ID              int
 	RestrictionName string
@@ -31,7 +32,7 @@ type Restriction struct {
 	UpdatedAt       time.Time
 }
 
-// Reservation is the reservations model
+// Reservation is the reservation model
 type Reservation struct {
 	ID        int
 	FirstName string
@@ -47,6 +48,7 @@ type Reservation struct {
 	Processed int
 }
 
+// RoomRestriction is the room restriction model
 type RoomRestriction struct {
 	ID            int
 	StartDate     time.Time
@@ -57,11 +59,11 @@ type RoomRestriction struct {
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 	Room          Room
-	Restriction   Restriction
 	Reservation   Reservation
+	Restriction   Restriction
 }
 
-// MailData Holds email struct
+// MailData holds an email message
 type MailData struct {
 	To       string
 	From     string

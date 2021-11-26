@@ -3,8 +3,8 @@ package render
 import (
 	"encoding/gob"
 	"github.com/alexedwards/scs/v2"
-	"github.com/lildannylin/bookings-app-golang/internal/config"
-	"github.com/lildannylin/bookings-app-golang/internal/models"
+	"github.com/tsawler/bookings/internal/config"
+	"github.com/tsawler/bookings/internal/models"
 	"log"
 	"net/http"
 	"os"
@@ -17,19 +17,18 @@ var testApp config.AppConfig
 
 func TestMain(m *testing.M) {
 
-	//Put in the session
+	// what am I going to put in the session
 	gob.Register(models.Reservation{})
 
 	// change this to true when in production
 	testApp.InProduction = false
 
 	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
-	testApp.InforLog = infoLog
+	testApp.InfoLog = infoLog
 
 	errorLog := log.New(os.Stdout, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
 	testApp.ErrorLog = errorLog
 
-	// set up the session
 	session = scs.New()
 	session.Lifetime = 24 * time.Hour
 	session.Cookie.Persist = true
