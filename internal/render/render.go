@@ -16,10 +16,25 @@ import (
 var functions = template.FuncMap{
 	"humanDate":  HumanDate,
 	"formatDate": FormatDate,
+	"iterate":    Iterate,
+	"add":        Add,
 }
 
 var app *config.AppConfig
 var pathToTemplates = "./templates"
+
+func Add(a, b int) int {
+	return a + b
+}
+
+func Iterate(count int) []int {
+	var i int
+	var items []int
+	for i = 0; i < count; i++ {
+		items = append(items, i)
+	}
+	return items
+}
 
 // NewRenderer sets the config for the template package
 func NewRenderer(a *config.AppConfig) {
