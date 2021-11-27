@@ -14,7 +14,7 @@
 - [simple mail](https://github.com/xhit/go-simple-mail/v2) as Sending Email pkg 
 - [Go validator](https://github.com/asaskevich/govalidator)
 
-## Database Diagram
+## Database Schema
 ![](https://i.imgur.com/NEZyBX6.png)
 
 ## Feature
