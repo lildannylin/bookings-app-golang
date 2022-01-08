@@ -4,7 +4,7 @@
 
 
 - **Built in Go 1.17**
-- **PostgresSQL as Database**
+- **PostgresSQL**
 - **Boostrap**
 ## Package
 - [chi router](https://github.com/go-chi/chi)
